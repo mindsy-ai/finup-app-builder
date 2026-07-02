@@ -70,7 +70,7 @@
   --text-secondary: #A1A1AA;
   --text-muted: #52525B;
 
-  --gradient-brand: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  --gradient-brand: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
 
   /* Shadcn mapped to FinUp dark tokens */
   --background: var(--bg-primary);
@@ -113,11 +113,11 @@
 }
 
 @utility gradient-brand {
-  background-image: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  background-image: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
 }
 
 @utility text-gradient-brand {
-  background-image: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  background-image: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
