@@ -15,16 +15,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  bookClientRevenue,
+  cancelFutureClientRevenue,
   createClient,
   deleteClient,
   fetchClients,
   updateClient,
+  type ClientRow,
   type ClientStage,
   type ClientStatus,
   type NewClient,
 } from "@/lib/clients";
 import { fetchTransactions } from "@/lib/transactions";
-import { formatBRL, formatDateBR, parseDateLocal } from "@/lib/format";
+import { formatBRL, formatDateBR, formatMonthYearPT, parseDateLocal } from "@/lib/format";
 import { usePeriod } from "@/lib/period";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -97,10 +100,14 @@ function ClientesPage() {
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<ClientFormState>(EMPTY_FORM);
 
+  const { refDate } = usePeriod();
   const clients = clientsQuery.data ?? [];
   const rows = txQuery.data ?? [];
+  const monthRows = rows.filter((r) => {
+    const d = parseDateLocal(r.occurred_at);
+    return d.getMonth() === refDate.getMonth() && d.getFullYear() === refDate.getFullYear();
+  });
 
-  const { refDate } = usePeriod();
   const clientStats = useMemo(() => {
     const map = new Map<
       string,
@@ -137,7 +144,25 @@ function ClientesPage() {
           : recShare <= 0
             ? { label: "Serviços", color: "var(--brand-orange)", bg: "rgba(255,92,26,0.12)" }
             : { label: "Misto", color: "var(--income)", bg: "rgba(34,197,94,0.12)" };
-    return { ...c, ...stats, recShare, servShare: 100 - recShare, revLabel };
+    // como a recorrência do contrato está sendo tratada no mês visualizado
+    const booked = monthRows.some(
+      (t) => t.type === "income" && t.entry_type === "recorrente" && t.client_id === c.id,
+    );
+    const contractState =
+      c.monthly_amount <= 0
+        ? null
+        : c.status === "ativo"
+          ? booked
+            ? { label: "Contabilizado", color: "var(--income)", bg: "rgba(34,197,94,0.12)" }
+            : { label: "A lançar", color: "var(--brand-orange)", bg: "rgba(255,92,26,0.12)" }
+          : c.status === "em_negociacao"
+            ? {
+                label: "Aguardando confirmação",
+                color: "var(--text-secondary)",
+                bg: "rgba(161,161,170,0.12)",
+              }
+            : { label: "Encerrado", color: "var(--expense)", bg: "rgba(239,68,68,0.12)" };
+    return { ...c, ...stats, recShare, servShare: 100 - recShare, revLabel, booked, contractState };
   });
 
   const mrr = enriched
@@ -154,22 +179,80 @@ function ClientesPage() {
 
   const selected = enriched.find((c) => c.id === selectedId) ?? null;
 
+  // contratos ativos cuja recorrência do mês ainda não virou receita
+  const pendingActivation = enriched.filter(
+    (c) => c.status === "ativo" && c.monthly_amount > 0 && !c.booked,
+  );
+  const negotiatingTotal = enriched
+    .filter((c) => c.status === "em_negociacao")
+    .reduce((s, c) => s + c.monthly_amount, 0);
+
+  const bookPending = useMutation({
+    mutationFn: async (items: ClientRow[]) => {
+      for (const c of items) await bookClientRevenue(c, refDate);
+      return items.length;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success(n === 1 ? "Recorrência lançada" : `${n} recorrências lançadas`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** já existe recorrência lançada para este cliente no mês visualizado? */
+  const hasRevenueThisMonth = (clientId: string) =>
+    monthRows.some(
+      (t) => t.type === "income" && t.entry_type === "recorrente" && t.client_id === clientId,
+    );
+
+  /**
+   * O status do contrato decide o que acontece com a recorrência:
+   * ativo lança a receita do mês, cancelado apaga o que ainda não aconteceu,
+   * em negociação não movimenta nada — é possibilidade, não receita.
+   */
+  const applyStatusEffects = async (client: ClientRow) => {
+    if (client.status === "ativo" && client.monthly_amount > 0 && !hasRevenueThisMonth(client.id)) {
+      await bookClientRevenue(client, refDate);
+      return "booked" as const;
+    }
+    if (client.status === "cancelado") {
+      await cancelFutureClientRevenue(client.id, refDate);
+      return "cancelled" as const;
+    }
+    return "none" as const;
+  };
+
   const createMutation = useMutation({
-    mutationFn: createClient,
-    onSuccess: () => {
+    mutationFn: async (input: NewClient) => {
+      const id = await createClient(input);
+      return applyStatusEffects({ ...(input as ClientRow), id });
+    },
+    onSuccess: (effect) => {
       qc.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Cliente adicionado");
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success(
+        effect === "booked" ? "Cliente ativo — recorrência lançada no mês" : "Cliente adicionado",
+      );
       closeForm();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<NewClient> }) =>
-      updateClient(id, input),
-    onSuccess: () => {
+    mutationFn: async ({ id, input }: { id: string; input: Partial<NewClient> }) => {
+      await updateClient(id, input);
+      return applyStatusEffects({ ...(input as ClientRow), id });
+    },
+    onSuccess: (effect) => {
       qc.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Cliente atualizado");
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success(
+        effect === "booked"
+          ? "Contrato ativado — recorrência lançada no mês"
+          : effect === "cancelled"
+            ? "Contrato cancelado — meses futuros removidos"
+            : "Cliente atualizado",
+      );
       closeForm();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -279,6 +362,35 @@ function ClientesPage() {
         />
       </div>
 
+      {(pendingActivation.length > 0 || negotiatingTotal > 0) && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-5 py-3.5">
+          {pendingActivation.length > 0 && (
+            <p className="text-xs text-[color:var(--text-secondary)]">
+              <strong className="font-bold text-[color:var(--brand-orange)]">
+                {formatBRL(pendingActivation.reduce((s, c) => s + c.monthly_amount, 0))}
+              </strong>{" "}
+              de contratos ativos ainda não lançados em {formatMonthYearPT(refDate)}
+            </p>
+          )}
+          {negotiatingTotal > 0 && (
+            <p className="text-xs text-[color:var(--text-secondary)]">
+              <strong className="font-bold text-white">{formatBRL(negotiatingTotal)}</strong> em
+              negociação — não conta como receita até o contrato virar ativo
+            </p>
+          )}
+          {pendingActivation.length > 0 && (
+            <button
+              type="button"
+              disabled={bookPending.isPending}
+              onClick={() => bookPending.mutate(pendingActivation)}
+              className="ml-auto rounded-md px-3 py-1.5 text-[11px] font-bold text-white gradient-brand disabled:opacity-50"
+            >
+              {bookPending.isPending ? "Lançando..." : "Lançar recorrências"}
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5 rounded-[11px] bg-white/5 p-1">
           <button
@@ -347,10 +459,15 @@ function ClientesPage() {
                       {c.probability}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-[color:var(--text-secondary)]">
-                    <span>{c.owner || "—"}</span>
-                    {c.revLabel && (
-                      <span style={{ color: c.revLabel.color }}>{c.revLabel.label}</span>
+                  <div className="flex items-center justify-between gap-2 text-[10px] text-[color:var(--text-secondary)]">
+                    <span className="truncate">{c.owner || "—"}</span>
+                    {c.contractState && (
+                      <span
+                        className="flex-shrink-0 rounded-full px-1.5 py-px font-bold"
+                        style={{ color: c.contractState.color, background: c.contractState.bg }}
+                      >
+                        {c.contractState.label}
+                      </span>
                     )}
                   </div>
                 </button>
@@ -373,7 +490,7 @@ function ClientesPage() {
               Recorrência
             </span>
             <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-secondary)]">
-              Receita
+              Contrato
             </span>
             <span className="text-right text-[10px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-secondary)]">
               Status
@@ -404,12 +521,12 @@ function ClientesPage() {
                   {c.monthly_amount > 0 ? `${formatBRL(c.monthly_amount)}/mês` : "—"}
                 </span>
                 <div>
-                  {c.revLabel ? (
+                  {c.contractState ? (
                     <span
                       className="rounded-full px-2.5 py-1 text-[10px] font-bold"
-                      style={{ color: c.revLabel.color, background: c.revLabel.bg }}
+                      style={{ color: c.contractState.color, background: c.contractState.bg }}
                     >
-                      {c.revLabel.label}
+                      {c.contractState.label}
                     </span>
                   ) : (
                     <span className="text-xs text-[color:var(--text-muted)]">—</span>

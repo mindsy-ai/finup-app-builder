@@ -46,6 +46,9 @@ export type ForecastData = {
   expectedExpenses: ExpectedExpense[];
   /** receita recorrente esperada dos contratos ativos */
   expectedIncome: ExpectedIncome[];
+  /** propostas em negociação — possibilidade, não receita */
+  negotiating: ExpectedIncome[];
+  negotiatingTotal: number;
   /** total de despesa recorrente ainda não lançada */
   pendingExpenseTotal: number;
   /** total de receita recorrente ainda não lançada */
@@ -103,6 +106,18 @@ export function useForecast(
         booked: (recurringIncomeByClient.get(c.id) ?? 0) >= c.monthly_amount,
       }));
 
+    // Em negociação é possibilidade, não receita: fica fora de qualquer total
+    // e só aparece rotulado como tal.
+    const negotiating: ExpectedIncome[] = (clients ?? [])
+      .filter((c) => c.status === "em_negociacao" && c.monthly_amount > 0)
+      .map((c) => ({
+        clientId: c.id,
+        clientName: c.name,
+        amount: c.monthly_amount,
+        booked: false,
+      }));
+    const negotiatingTotal = negotiating.reduce((s, c) => s + c.amount, 0);
+
     const pendingExpenseTotal = expectedExpenses
       .filter((e) => !e.launched)
       .reduce((s, e) => s + e.amount, 0);
@@ -120,6 +135,8 @@ export function useForecast(
     return {
       expectedExpenses,
       expectedIncome,
+      negotiating,
+      negotiatingTotal,
       pendingExpenseTotal,
       pendingIncomeTotal,
       bookedIncome,
