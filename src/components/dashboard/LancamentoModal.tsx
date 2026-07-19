@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createTransaction, type NewTx } from "@/lib/transactions";
+import {
+  createTransaction,
+  existingCategories,
+  fetchTransactions,
+  type NewTx,
+} from "@/lib/transactions";
 
 export function LancamentoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const txQuery = useQuery({ queryKey: ["transactions"], queryFn: fetchTransactions });
+  const categories = existingCategories(txQuery.data);
   const [form, setForm] = useState<NewTx>({
     type: "income",
     amount: 0,
@@ -30,13 +37,18 @@ export function LancamentoModal({ open, onClose }: { open: boolean; onClose: () 
   const set = <K extends keyof NewTx>(k: K, v: NewTx[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-white">Novo Lançamento</h2>
-        <p className="mt-1 text-xs text-[color:var(--text-secondary)]">Registre uma receita ou despesa.</p>
+        <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
+          Registre uma receita ou despesa.
+        </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(["income", "expense"] as const).map((t) => (
@@ -89,11 +101,17 @@ export function LancamentoModal({ open, onClose }: { open: boolean; onClose: () 
           </div>
           <Field label="Categoria">
             <input
+              list="categorias-dashboard"
               value={form.category}
               onChange={(e) => set("category", e.target.value)}
               className={inputCls}
               placeholder="Marketing, Operacional, Outros…"
             />
+            <datalist id="categorias-dashboard">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </Field>
         </div>
 
@@ -108,9 +126,7 @@ export function LancamentoModal({ open, onClose }: { open: boolean; onClose: () 
           <button
             type="button"
             disabled={mutation.isPending || !form.description || form.amount <= 0}
-            onClick={() =>
-              mutation.mutate({ ...form, category: form.category || "Outros" })
-            }
+            onClick={() => mutation.mutate({ ...form, category: form.category || "Outros" })}
             className="rounded-md px-4 py-2 text-sm font-semibold text-white gradient-brand disabled:opacity-50"
           >
             {mutation.isPending ? "Salvando..." : "Salvar"}
