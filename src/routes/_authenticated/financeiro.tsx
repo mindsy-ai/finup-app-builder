@@ -11,6 +11,7 @@ import {
   Cloud,
   PiggyBank,
   Plus,
+  Pencil,
   Repeat,
   Trash2,
   TrendingUp,
@@ -23,8 +24,10 @@ import {
   existingCategories,
   fetchTransactions,
   settleTransaction,
+  type TxRow,
 } from "@/lib/transactions";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DespesaModal } from "@/components/DespesaModal";
 import { dueLabel, effectiveStatus, reconcile, statusVisual } from "@/lib/status";
 import { ReconciliationBar } from "@/components/ReconciliationBar";
 import {
@@ -64,6 +67,7 @@ function FinanceiroPage() {
   const [showNewConta, setShowNewConta] = useState(false);
   const [deletingPayable, setDeletingPayable] = useState<string | null>(null);
   const [deletingRecurring, setDeletingRecurring] = useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = useState<TxRow | null>(null);
 
   const rows = txQuery.data ?? [];
   const monthRows = useMemo(
@@ -76,6 +80,11 @@ function FinanceiroPage() {
   );
 
   const incomeRows = monthRows.filter((r) => r.type === "income");
+  const monthExpenses = monthRows
+    .filter((r) => r.type === "expense")
+    .sort(
+      (a, b) => parseDateLocal(b.occurred_at).getTime() - parseDateLocal(a.occurred_at).getTime(),
+    );
 
   // Uma recorrência só entra nos totais depois de virar transação. A previsão cruza
   // agendamentos e contratos ativos com o que já foi lançado no mês visualizado.
@@ -619,12 +628,117 @@ function FinanceiroPage() {
         </div>
       </div>
 
+      {/* Toda despesa do mês, paga ou não — sem isso uma despesa liquidada
+          ficaria invisível e impossível de corrigir ou remover. */}
+      <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-default)] px-5 py-4">
+          <div>
+            <p className="text-sm font-bold text-white">Todas as Despesas</p>
+            <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
+              Tudo que compõe as despesas de {formatMonthYearPT(refDate)}
+            </p>
+          </div>
+          <span className="text-xs font-bold text-white tabular-nums">
+            {formatBRL(dash.despesas)}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3">
+          {["Descrição", "Categoria", "Data", "Situação", "Valor", "Ações"].map((h, i) => (
+            <span
+              key={h}
+              className={`text-[10px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-secondary)] ${
+                i >= 4 ? "text-right" : ""
+              }`}
+            >
+              {h}
+            </span>
+          ))}
+        </div>
+
+        {monthExpenses.length === 0 && (
+          <p className="px-5 py-10 text-center text-sm text-[color:var(--text-muted)]">
+            Nenhuma despesa em {formatMonthYearPT(refDate)}.
+          </p>
+        )}
+
+        {monthExpenses.map((d) => {
+          const st = effectiveStatus(d);
+          const sv = statusVisual(st, "expense");
+          return (
+            <div
+              key={d.id}
+              className={`grid grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 last:border-b-0 ${
+                st === "overdue" ? "bg-[rgba(239,68,68,0.04)]" : ""
+              }`}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="truncate text-[13px] font-medium text-white">{d.description}</p>
+                {d.is_recurring && (
+                  <span
+                    title="Gerada por uma recorrência"
+                    className="flex-shrink-0 rounded-full bg-[rgba(124,58,255,0.14)] px-1.5 py-px text-[9px] font-bold text-[color:var(--brand-purple)]"
+                  >
+                    REC
+                  </span>
+                )}
+              </div>
+              <span className="truncate text-xs text-[color:var(--text-secondary)]">
+                {d.category}
+              </span>
+              <span className="text-xs text-[color:var(--text-secondary)]">
+                {formatDateBR(d.occurred_at)}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  title={st === "settled" ? "Marcar como a pagar" : "Confirmar pagamento"}
+                  disabled={settle.isPending}
+                  onClick={() => settle.mutate({ id: d.id, settled: st !== "settled" })}
+                  className="rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ color: sv.color, background: sv.bg }}
+                >
+                  {sv.label}
+                </button>
+              </div>
+              <span className="text-right text-sm font-bold text-white tabular-nums">
+                {formatBRL(d.amount)}
+              </span>
+              <div className="flex justify-end gap-1">
+                <button
+                  type="button"
+                  aria-label={`Editar despesa ${d.description}`}
+                  title="Editar"
+                  onClick={() => setEditingExpense(d)}
+                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-white/5 hover:text-white"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Excluir despesa ${d.description}`}
+                  title="Excluir"
+                  onClick={() => setDeletingPayable(d.id)}
+                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.12)] hover:text-[color:var(--expense)]"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {editingExpense && (
+        <DespesaModal row={editingExpense} onClose={() => setEditingExpense(null)} />
+      )}
+
       {showNewConta && <NovaContaModal onClose={() => setShowNewConta(false)} />}
 
       {deletingPayable && (
         <ConfirmDialog
-          title="Excluir conta"
-          message={`“${payables.find((p) => p.id === deletingPayable)?.description}” será removida permanentemente e sairá dos totais de despesa.`}
+          title="Excluir despesa"
+          message={`“${rows.find((p) => p.id === deletingPayable)?.description}” será removida permanentemente e sairá de todos os totais e relatórios.`}
           pending={removeTx.isPending}
           onConfirm={() => removeTx.mutate(deletingPayable)}
           onCancel={() => setDeletingPayable(null)}
@@ -634,7 +748,18 @@ function FinanceiroPage() {
       {deletingRecurring && (
         <ConfirmDialog
           title="Excluir recorrência"
-          message={`“${recurringStatus.find((r) => r.id === deletingRecurring)?.name}” deixará de ser agendada. As despesas já lançadas a partir dela continuam no histórico.`}
+          message={(() => {
+            const r = recurringStatus.find((x) => x.id === deletingRecurring);
+            const geradas = rows.filter(
+              (t) =>
+                t.type === "expense" && t.is_recurring && t.description.trim() === r?.name.trim(),
+            ).length;
+            return `“${r?.name}” deixa de ser agendada e não gera mais despesas.${
+              geradas > 0
+                ? ` As ${geradas} despesas já lançadas a partir dela continuam contando nos totais — remova-as em “Todas as Despesas” se quiser tirá-las do resultado.`
+                : ""
+            }`;
+          })()}
           pending={removeRecurring.isPending}
           onConfirm={() => removeRecurring.mutate(deletingRecurring)}
           onCancel={() => setDeletingRecurring(null)}
