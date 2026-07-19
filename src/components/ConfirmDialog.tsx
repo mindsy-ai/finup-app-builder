@@ -7,6 +7,8 @@ type Props = {
   confirmLabel?: string;
   destructive?: boolean;
   pending?: boolean;
+  /** opções extras da ação, como "remover também o agendamento" */
+  children?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel = "Excluir",
   destructive = true,
   pending,
+  children,
   onConfirm,
   onCancel,
 }: Props) {
@@ -50,6 +53,7 @@ export function ConfirmDialog({
           <h2 className="text-base font-bold text-white">{title}</h2>
         </div>
         <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">{message}</p>
+        {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"

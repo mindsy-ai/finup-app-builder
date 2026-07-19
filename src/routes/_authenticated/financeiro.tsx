@@ -68,6 +68,8 @@ function FinanceiroPage() {
   const [deletingPayable, setDeletingPayable] = useState<string | null>(null);
   const [deletingRecurring, setDeletingRecurring] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<TxRow | null>(null);
+  const [alsoDeleteSchedule, setAlsoDeleteSchedule] = useState(false);
+  const [alsoDeleteLaunched, setAlsoDeleteLaunched] = useState(false);
 
   const rows = txQuery.data ?? [];
   const monthRows = useMemo(
@@ -94,22 +96,42 @@ function FinanceiroPage() {
   const pendingRecurring = recurringStatus.filter((r) => !r.launched);
   const pendingRecurringTotal = forecast.pendingExpenseTotal;
 
+  /**
+   * "Contas a Pagar" é a mesma transação filtrada por pendente — excluir aqui já
+   * some de lá. O agendamento, porém, vive em outra tabela: sem removê-lo junto,
+   * ele volta a gerar a despesa no mês seguinte.
+   */
   const removeTx = useMutation({
-    mutationFn: deleteTransaction,
-    onSuccess: () => {
+    mutationFn: async ({ id, alsoSchedule }: { id: string; alsoSchedule?: string }) => {
+      await deleteTransaction(id);
+      if (alsoSchedule) await deleteRecurringExpense(alsoSchedule);
+    },
+    onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
-      toast.success("Conta excluída");
+      qc.invalidateQueries({ queryKey: ["recurring-expenses"] });
+      toast.success(v.alsoSchedule ? "Despesa e recorrência excluídas" : "Despesa excluída");
       setDeletingPayable(null);
+      setAlsoDeleteSchedule(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const removeRecurring = useMutation({
-    mutationFn: deleteRecurringExpense,
-    onSuccess: () => {
+    mutationFn: async ({ id, alsoTxIds }: { id: string; alsoTxIds: string[] }) => {
+      await deleteRecurringExpense(id);
+      for (const txId of alsoTxIds) await deleteTransaction(txId);
+      return alsoTxIds.length;
+    },
+    onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["recurring-expenses"] });
-      toast.success("Recorrência excluída");
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success(
+        n > 0
+          ? `Recorrência e ${n} ${n === 1 ? "despesa" : "despesas"} excluídas`
+          : "Recorrência excluída",
+      );
       setDeletingRecurring(null);
+      setAlsoDeleteLaunched(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -735,36 +757,97 @@ function FinanceiroPage() {
 
       {showNewConta && <NovaContaModal onClose={() => setShowNewConta(false)} />}
 
-      {deletingPayable && (
-        <ConfirmDialog
-          title="Excluir despesa"
-          message={`“${rows.find((p) => p.id === deletingPayable)?.description}” será removida permanentemente e sairá de todos os totais e relatórios.`}
-          pending={removeTx.isPending}
-          onConfirm={() => removeTx.mutate(deletingPayable)}
-          onCancel={() => setDeletingPayable(null)}
-        />
-      )}
+      {deletingPayable &&
+        (() => {
+          const tx = rows.find((p) => p.id === deletingPayable);
+          // agendamento de onde essa despesa veio, se ainda existir
+          const schedule = tx?.is_recurring
+            ? (recurringQuery.data ?? []).find((r) => r.name.trim() === tx.description.trim())
+            : undefined;
+          const isPayable = tx?.status !== "paid" && !!tx?.due_date;
+          return (
+            <ConfirmDialog
+              title="Excluir despesa"
+              message={`“${tx?.description}” será removida permanentemente e sairá de todos os totais e relatórios${
+                isPayable ? ", inclusive de Contas a Pagar" : ""
+              }.`}
+              pending={removeTx.isPending}
+              onConfirm={() =>
+                removeTx.mutate({
+                  id: deletingPayable,
+                  alsoSchedule: alsoDeleteSchedule && schedule ? schedule.id : undefined,
+                })
+              }
+              onCancel={() => {
+                setDeletingPayable(null);
+                setAlsoDeleteSchedule(false);
+              }}
+            >
+              {schedule && (
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[color:var(--brand-purple)]/30 bg-[color:var(--brand-purple)]/[0.06] p-3">
+                  <input
+                    type="checkbox"
+                    checked={alsoDeleteSchedule}
+                    onChange={(e) => setAlsoDeleteSchedule(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[color:var(--brand-purple)]"
+                  />
+                  <span className="text-xs text-white">
+                    Excluir também a recorrência “{schedule.name}”
+                    <span className="mt-0.5 block text-[11px] text-[color:var(--text-secondary)]">
+                      Sem isso ela volta a gerar esta despesa nos próximos meses.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </ConfirmDialog>
+          );
+        })()}
 
-      {deletingRecurring && (
-        <ConfirmDialog
-          title="Excluir recorrência"
-          message={(() => {
-            const r = recurringStatus.find((x) => x.id === deletingRecurring);
-            const geradas = rows.filter(
-              (t) =>
-                t.type === "expense" && t.is_recurring && t.description.trim() === r?.name.trim(),
-            ).length;
-            return `“${r?.name}” deixa de ser agendada e não gera mais despesas.${
-              geradas > 0
-                ? ` As ${geradas} despesas já lançadas a partir dela continuam contando nos totais — remova-as em “Todas as Despesas” se quiser tirá-las do resultado.`
-                : ""
-            }`;
-          })()}
-          pending={removeRecurring.isPending}
-          onConfirm={() => removeRecurring.mutate(deletingRecurring)}
-          onCancel={() => setDeletingRecurring(null)}
-        />
-      )}
+      {deletingRecurring &&
+        (() => {
+          const r = recurringStatus.find((x) => x.id === deletingRecurring);
+          const geradas = rows.filter(
+            (t) =>
+              t.type === "expense" && t.is_recurring && t.description.trim() === r?.name.trim(),
+          );
+          const total = geradas.reduce((s, t) => s + t.amount, 0);
+          return (
+            <ConfirmDialog
+              title="Excluir recorrência"
+              message={`“${r?.name}” deixa de ser agendada e não gera mais despesas nos próximos meses.`}
+              pending={removeRecurring.isPending}
+              onConfirm={() =>
+                removeRecurring.mutate({
+                  id: deletingRecurring,
+                  alsoTxIds: alsoDeleteLaunched ? geradas.map((t) => t.id) : [],
+                })
+              }
+              onCancel={() => {
+                setDeletingRecurring(null);
+                setAlsoDeleteLaunched(false);
+              }}
+            >
+              {geradas.length > 0 && (
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[color:var(--expense)]/30 bg-[rgba(239,68,68,0.06)] p-3">
+                  <input
+                    type="checkbox"
+                    checked={alsoDeleteLaunched}
+                    onChange={(e) => setAlsoDeleteLaunched(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[color:var(--expense)]"
+                  />
+                  <span className="text-xs text-white">
+                    Excluir também as {geradas.length}{" "}
+                    {geradas.length === 1 ? "despesa já lançada" : "despesas já lançadas"} (
+                    {formatBRL(total)})
+                    <span className="mt-0.5 block text-[11px] text-[color:var(--text-secondary)]">
+                      Sem isso elas continuam contando nos totais e no histórico.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </ConfirmDialog>
+          );
+        })()}
     </div>
   );
 }
