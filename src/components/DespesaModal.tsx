@@ -47,11 +47,11 @@ export function DespesaModal({ row, onClose }: { row: TxRow; onClose: () => void
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-6"
+        className="max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-2xl sm:p-6 sm:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-white">Editar despesa</h2>

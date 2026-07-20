@@ -34,14 +34,14 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/65 sm:items-center sm:p-4"
       onClick={onCancel}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-6"
+        className="w-full rounded-t-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:max-w-sm sm:rounded-2xl sm:p-6 sm:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center gap-2.5">

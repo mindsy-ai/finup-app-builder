@@ -15,10 +15,10 @@ type Datum = { month: string; receita: number; despesa: number };
 export function ReceitaDespesaChart({ data }: { data: Datum[] }) {
   const max = Math.max(0, ...data.flatMap((d) => [d.receita, d.despesa]));
   return (
-    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
-      <div className="flex items-start justify-between">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-4 sm:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Receita vs Despesas</h3>
+          <h3 className="text-sm font-semibold text-white sm:text-base">Receita vs Despesas</h3>
           <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
             Últimos 6 meses{max >= 10000 ? " · em mil R$" : ""}
           </p>
@@ -34,7 +34,7 @@ export function ReceitaDespesaChart({ data }: { data: Datum[] }) {
           </span>
         </div>
       </div>
-      <div className="mt-4 h-[260px] w-full">
+      <div className="mt-4 h-[200px] w-full sm:h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barGap={6} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid stroke="#2A2A2A" strokeDasharray="3 3" vertical={false} />

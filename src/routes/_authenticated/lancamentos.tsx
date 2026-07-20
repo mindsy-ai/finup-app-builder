@@ -178,11 +178,11 @@ function LancamentosPage() {
   const deletingRow = entries.find((e) => e.id === deletingId) ?? null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-bold leading-tight text-white">Lançamentos</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          <h1 className="text-xl font-bold leading-tight text-white sm:text-2xl">Lançamentos</h1>
+          <p className="mt-0.5 text-[13px] text-[color:var(--text-secondary)] sm:mt-1 sm:text-sm">
             Serviços, vendas e comissões recebidos · {formatMonthYearPT(refDate)}
           </p>
         </div>
@@ -335,7 +335,7 @@ function LancamentosPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         {summary.map((s) => {
           const Icon = ENTRY_TYPE_ICON[s.key];
           return (
@@ -410,14 +410,14 @@ function LancamentosPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5 rounded-[11px] bg-white/5 p-1">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:mx-0 lg:flex-wrap lg:rounded-[11px] lg:bg-white/5 lg:p-1 [&::-webkit-scrollbar]:hidden">
           {(["all", ...ENTRY_TYPES.map((t) => t.key)] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              className={`flex-shrink-0 rounded-lg bg-white/5 px-3.5 py-2 text-xs font-bold transition-colors lg:bg-transparent lg:py-1.5 ${
                 filter === f ? "text-white" : "text-[color:var(--text-secondary)]"
               }`}
               style={filter === f ? { background: "var(--brand-purple)" } : undefined}
@@ -427,7 +427,7 @@ function LancamentosPage() {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-1.5 rounded-[11px] bg-white/5 p-1">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:mx-0 lg:flex-wrap lg:rounded-[11px] lg:bg-white/5 lg:p-1 [&::-webkit-scrollbar]:hidden">
           {(
             [
               ["all", "Todas"],
@@ -450,7 +450,7 @@ function LancamentosPage() {
                 key={key}
                 type="button"
                 onClick={() => setStatusFilter(key)}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-colors ${
+                className={`flex-shrink-0 rounded-lg bg-white/5 px-3.5 py-2 text-xs font-bold transition-colors lg:bg-transparent lg:py-1.5 ${
                   active ? "text-white" : "text-[color:var(--text-secondary)]"
                 }`}
                 style={active ? { background: color } : undefined}
@@ -468,7 +468,7 @@ function LancamentosPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
-        <div className="grid grid-cols-[44px_2.2fr_1.2fr_1fr_1fr_0.9fr_72px] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3">
+        <div className="hidden grid-cols-[44px_2.2fr_1.2fr_1fr_1fr_0.9fr_72px] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3 lg:grid">
           <span />
           <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-secondary)]">
             Descrição
@@ -499,91 +499,154 @@ function LancamentosPage() {
           const TypeIcon = ENTRY_TYPE_ICON[type];
           const status = effectiveStatus(e);
           const sv = statusVisual(status, "income");
-          return (
-            <div
-              key={e.id}
-              className={`grid grid-cols-[44px_2.2fr_1.2fr_1fr_1fr_0.9fr_72px] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 last:border-b-0 ${
-                status === "overdue" ? "bg-[rgba(239,68,68,0.04)]" : ""
-              }`}
-            >
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-[9px]"
-                style={{ background: ENTRY_TYPE_BG[type] }}
+          const settleButton = (
+            <>
+              {status === "settled" ? (
+                <button
+                  type="button"
+                  title="Desfazer confirmação"
+                  disabled={settle.isPending}
+                  onClick={() => settle.mutate({ id: e.id, settled: false })}
+                  className="inline-flex items-center gap-1 rounded-full bg-[rgba(34,197,94,0.12)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--income)] hover:bg-[rgba(34,197,94,0.2)] disabled:opacity-50"
+                >
+                  <Check className="h-3 w-3" />
+                  {formatDateBR(e.occurred_at)}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={settle.isPending}
+                  onClick={() => settle.mutate({ id: e.id, settled: true })}
+                  className="rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:opacity-50"
+                  style={{ borderColor: `${sv.color}66`, color: sv.color }}
+                >
+                  Confirmar
+                </button>
+              )}
+            </>
+          );
+          const actionButtons = (
+            <>
+              <button
+                type="button"
+                aria-label={`Editar ${e.description}`}
+                title="Editar"
+                onClick={() => openEdit(e)}
+                className="rounded-md p-2 text-[color:var(--text-secondary)] hover:bg-white/5 hover:text-white lg:p-1.5"
               >
-                <TypeIcon className="h-[17px] w-[17px]" style={{ color: ENTRY_TYPE_COLOR[type] }} />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-white">{e.description}</p>
-                <span
-                  className="inline-flex items-center gap-1.5 text-[10px] font-bold"
-                  style={{ color: sv.color }}
-                >
-                  <span className="h-[5px] w-[5px] rounded-full" style={{ background: sv.color }} />
-                  {sv.label}
-                  {status !== "settled" && (
-                    <span className="font-medium text-[color:var(--text-secondary)]">
-                      · {dueLabel(e)}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <span className="truncate text-xs font-medium text-[color:var(--text-secondary)]">
-                {e.client?.name ?? "—"}
-              </span>
-              <div>
-                <span
-                  className="rounded-full px-2.5 py-1 text-[10px] font-bold"
-                  style={{ background: ENTRY_TYPE_BG[type], color: ENTRY_TYPE_COLOR[type] }}
-                >
-                  {entryTypeLabel(e.entry_type)}
-                </span>
-              </div>
-              <div className="flex justify-start">
-                {status === "settled" ? (
-                  <button
-                    type="button"
-                    title="Desfazer confirmação"
-                    disabled={settle.isPending}
-                    onClick={() => settle.mutate({ id: e.id, settled: false })}
-                    className="inline-flex items-center gap-1 rounded-full bg-[rgba(34,197,94,0.12)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--income)] hover:bg-[rgba(34,197,94,0.2)] disabled:opacity-50"
+                <Pencil className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label={`Excluir ${e.description}`}
+                title="Excluir"
+                onClick={() => setDeletingId(e.id)}
+                className="rounded-md p-2 text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.12)] hover:text-[color:var(--expense)] lg:p-1.5"
+              >
+                <Trash2 className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+              </button>
+            </>
+          );
+          const rowBg = status === "overdue" ? "bg-[rgba(239,68,68,0.04)]" : "";
+
+          return (
+            <div key={e.id}>
+              {/* Mobile: card em três faixas — identidade, situação, ações */}
+              <div
+                className={`border-b border-[color:var(--border-subtle)] px-4 py-3.5 lg:hidden ${rowBg}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px]"
+                    style={{ background: ENTRY_TYPE_BG[type] }}
                   >
-                    <Check className="h-3 w-3" />
-                    {formatDateBR(e.occurred_at)}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={settle.isPending}
-                    onClick={() => settle.mutate({ id: e.id, settled: true })}
-                    className="rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors disabled:opacity-50"
-                    style={{ borderColor: `${sv.color}66`, color: sv.color }}
-                  >
-                    Confirmar
-                  </button>
-                )}
+                    <TypeIcon
+                      className="h-[18px] w-[18px]"
+                      style={{ color: ENTRY_TYPE_COLOR[type] }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">
+                        {e.description}
+                      </p>
+                      <span className="flex-shrink-0 text-[15px] font-bold text-white tabular-nums">
+                        {formatBRL(e.amount)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[12px] text-[color:var(--text-secondary)]">
+                      {e.client?.name ?? "Sem cliente"} · {entryTypeLabel(e.entry_type)}
+                    </p>
+                    <p
+                      className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold"
+                      style={{ color: sv.color }}
+                    >
+                      <span
+                        className="h-[6px] w-[6px] flex-shrink-0 rounded-full"
+                        style={{ background: sv.color }}
+                      />
+                      {sv.label}
+                      {status !== "settled" && (
+                        <span className="font-medium text-[color:var(--text-secondary)]">
+                          · {dueLabel(e)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center justify-between gap-2 pl-12">
+                  {settleButton}
+                  <div className="flex gap-1">{actionButtons}</div>
+                </div>
               </div>
-              <span className="text-right text-sm font-bold text-white tabular-nums">
-                {formatBRL(e.amount)}
-              </span>
-              <div className="flex justify-end gap-1">
-                <button
-                  type="button"
-                  aria-label={`Editar ${e.description}`}
-                  title="Editar"
-                  onClick={() => openEdit(e)}
-                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-white/5 hover:text-white"
+
+              {/* Desktop: mantém a tabela */}
+              <div
+                className={`hidden grid-cols-[44px_2.2fr_1.2fr_1fr_1fr_0.9fr_72px] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 lg:grid ${rowBg}`}
+              >
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px]"
+                  style={{ background: ENTRY_TYPE_BG[type] }}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Excluir ${e.description}`}
-                  title="Excluir"
-                  onClick={() => setDeletingId(e.id)}
-                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.12)] hover:text-[color:var(--expense)]"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                  <TypeIcon
+                    className="h-[17px] w-[17px]"
+                    style={{ color: ENTRY_TYPE_COLOR[type] }}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-white">{e.description}</p>
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[10px] font-bold"
+                    style={{ color: sv.color }}
+                  >
+                    <span
+                      className="h-[5px] w-[5px] rounded-full"
+                      style={{ background: sv.color }}
+                    />
+                    {sv.label}
+                    {status !== "settled" && (
+                      <span className="font-medium text-[color:var(--text-secondary)]">
+                        · {dueLabel(e)}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <span className="truncate text-xs font-medium text-[color:var(--text-secondary)]">
+                  {e.client?.name ?? "—"}
+                </span>
+                <div>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-[10px] font-bold"
+                    style={{ background: ENTRY_TYPE_BG[type], color: ENTRY_TYPE_COLOR[type] }}
+                  >
+                    {entryTypeLabel(e.entry_type)}
+                  </span>
+                </div>
+                <div className="flex justify-start">{settleButton}</div>
+                <span className="text-right text-sm font-bold text-white tabular-nums">
+                  {formatBRL(e.amount)}
+                </span>
+                <div className="flex justify-end gap-1">{actionButtons}</div>
               </div>
             </div>
           );

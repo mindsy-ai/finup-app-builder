@@ -87,8 +87,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "FinUp" },
       { name: "twitter:description", content: "nada" },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6cc751f4-9e75-41b5-ba40-f18eaeed817d/id-preview-90ec793b--bdf00feb-01f0-4edb-b2d3-66a7c68d4957.lovable.app-1782606766516.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6cc751f4-9e75-41b5-ba40-f18eaeed817d/id-preview-90ec793b--bdf00feb-01f0-4edb-b2d3-66a7c68d4957.lovable.app-1782606766516.png" },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6cc751f4-9e75-41b5-ba40-f18eaeed817d/id-preview-90ec793b--bdf00feb-01f0-4edb-b2d3-66a7c68d4957.lovable.app-1782606766516.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6cc751f4-9e75-41b5-ba40-f18eaeed817d/id-preview-90ec793b--bdf00feb-01f0-4edb-b2d3-66a7c68d4957.lovable.app-1782606766516.png",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },

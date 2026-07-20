@@ -47,7 +47,8 @@ export function ReconciliationBar({ data, flow, title, subtitle }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      {/* No mobile, três colunas em 360px cortariam os valores: viram linhas. */}
+      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
         <Cell
           label={settledLabel}
           value={data.settled}
@@ -86,8 +87,8 @@ function Cell({
   alert?: boolean;
 }) {
   return (
-    <div>
-      <div className="mb-1 flex items-center gap-1.5">
+    <div className="flex items-center justify-between gap-3 sm:block">
+      <div className="flex items-center gap-1.5 sm:mb-1">
         <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: color }} />
         <span
           className={`text-[10px] font-bold uppercase tracking-[0.05em] ${
@@ -98,12 +99,14 @@ function Cell({
           {label}
         </span>
       </div>
-      <p className="text-[17px] font-bold leading-none text-white tabular-nums">
-        {formatBRL(value)}
-      </p>
-      <p className="mt-1 text-[11px] text-[color:var(--text-secondary)] tabular-nums">
-        {Math.round(pct)}% do total
-      </p>
+      <div className="flex items-baseline gap-2 sm:block">
+        <p className="text-[15px] font-bold leading-none text-white tabular-nums sm:text-[17px]">
+          {formatBRL(value)}
+        </p>
+        <p className="text-[11px] text-[color:var(--text-secondary)] tabular-nums sm:mt-1">
+          {Math.round(pct)}%<span className="hidden sm:inline"> do total</span>
+        </p>
+      </div>
     </div>
   );
 }

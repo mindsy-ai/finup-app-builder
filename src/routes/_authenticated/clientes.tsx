@@ -313,11 +313,11 @@ function ClientesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-bold leading-tight text-white">Clientes</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          <h1 className="text-xl font-bold leading-tight text-white sm:text-2xl">Clientes</h1>
+          <p className="mt-0.5 text-[13px] text-[color:var(--text-secondary)] sm:mt-1 sm:text-sm">
             Base de clientes e pipeline · {formatBRL(mrr)}/mês em recorrência ativa
           </p>
         </div>
@@ -331,7 +331,7 @@ function ClientesPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <MiniKpi
           label="Clientes Ativos"
           value={String(nActive)}
@@ -479,7 +479,7 @@ function ClientesPage() {
 
       {view === "table" && (
         <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
-          <div className="grid grid-cols-[2.2fr_1.3fr_1.2fr_1.3fr_1fr] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3">
+          <div className="hidden grid-cols-[2.2fr_1.3fr_1.2fr_1.3fr_1fr] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3 lg:grid">
             <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-secondary)]">
               Cliente
             </span>
@@ -508,19 +508,19 @@ function ClientesPage() {
                 key={c.id}
                 type="button"
                 onClick={() => setSelectedId(c.id)}
-                className="grid w-full grid-cols-[2.2fr_1.3fr_1.2fr_1.3fr_1fr] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 text-left last:border-b-0 hover:bg-white/5"
+                className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 border-b border-[color:var(--border-subtle)] px-4 py-3.5 text-left last:border-b-0 hover:bg-white/5 lg:grid lg:grid-cols-[2.2fr_1.3fr_1.2fr_1.3fr_1fr] lg:gap-3 lg:px-5"
               >
-                <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <Avatar name={c.name} />
                   <span className="truncate text-[13px] font-medium text-white">{c.name}</span>
                 </div>
                 <span className="text-xs font-medium text-[color:var(--text-secondary)]">
                   {c.nicho}
                 </span>
-                <span className="text-right text-sm font-bold text-white tabular-nums">
+                <span className="ml-auto text-right text-sm font-bold text-white tabular-nums lg:ml-0">
                   {c.monthly_amount > 0 ? `${formatBRL(c.monthly_amount)}/mês` : "—"}
                 </span>
-                <div>
+                <div className="order-3 lg:order-none">
                   {c.contractState ? (
                     <span
                       className="rounded-full px-2.5 py-1 text-[10px] font-bold"
@@ -532,7 +532,7 @@ function ClientesPage() {
                     <span className="text-xs text-[color:var(--text-muted)]">—</span>
                   )}
                 </div>
-                <div className="flex justify-end">
+                <div className="order-3 flex lg:order-none lg:justify-end">
                   <span
                     className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
                     style={{ color: sm.color, background: sm.bg }}
@@ -708,11 +708,11 @@ function ClientesPage() {
 
       {showForm && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
           onClick={closeForm}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-6"
+            className="max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-2xl sm:p-6 sm:pb-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-white">
@@ -882,19 +882,19 @@ function MiniKpi({
   bg: string;
 }) {
   return (
-    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-[18px]">
-      <div className="mb-3 flex items-center gap-2.5">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-3 sm:p-[18px]">
+      <div className="mb-2 flex items-center gap-2 sm:mb-3 sm:gap-2.5">
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-[9px]"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[9px]"
           style={{ background: bg }}
         >
           <Icon className="h-[17px] w-[17px]" style={{ color }} />
         </div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[color:var(--text-secondary)]">
+        <p className="truncate text-[10px] font-bold uppercase tracking-[0.05em] text-[color:var(--text-secondary)] sm:text-[11px]">
           {label}
         </p>
       </div>
-      <p className="text-xl font-bold text-white tabular-nums">{value}</p>
+      <p className="truncate text-lg font-bold text-white tabular-nums sm:text-xl">{value}</p>
     </div>
   );
 }

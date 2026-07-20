@@ -1,23 +1,42 @@
+import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { formatBRLCompact } from "@/lib/format";
 
 type Slice = { name: string; value: number; color: string };
 
 export function CategoriaDonut({ data, total }: { data: Slice[]; total: number }) {
+  // o container encolhe no mobile; o raio precisa acompanhar
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setCompact(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   const safe = data.length > 0 ? data : [{ name: "Sem dados", value: 1, color: "#2A2A2A" }];
   const pct = (v: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
+    <div className="flex h-full flex-col rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-4 sm:p-5">
       <div>
-        <h3 className="text-base font-semibold text-white">Distribuição</h3>
+        <h3 className="text-sm font-semibold text-white sm:text-base">Distribuição</h3>
         <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">Por categoria</p>
       </div>
 
-      <div className="relative mx-auto mt-2 h-[180px] w-[180px]">
+      <div className="relative mx-auto mt-2 h-[140px] w-[140px] sm:h-[180px] sm:w-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={safe} dataKey="value" innerRadius={58} outerRadius={82} stroke="none" startAngle={90} endAngle={-270}>
+            <Pie
+              data={safe}
+              dataKey="value"
+              innerRadius={compact ? 45 : 58}
+              outerRadius={compact ? 64 : 82}
+              stroke="none"
+              startAngle={90}
+              endAngle={-270}
+            >
               {safe.map((s, i) => (
                 <Cell key={i} fill={s.color} />
               ))}
@@ -31,9 +50,14 @@ export function CategoriaDonut({ data, total }: { data: Slice[]; total: number }
       </div>
 
       <ul className="mt-4 space-y-2">
-        {data.length === 0 && <li className="text-xs text-[color:var(--text-muted)]">Sem despesas no período</li>}
+        {data.length === 0 && (
+          <li className="text-xs text-[color:var(--text-muted)]">Sem despesas no período</li>
+        )}
         {data.map((s) => (
-          <li key={s.name} className="flex items-center justify-between text-xs text-[color:var(--text-secondary)]">
+          <li
+            key={s.name}
+            className="flex items-center justify-between text-xs text-[color:var(--text-secondary)]"
+          >
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
               {s.name}

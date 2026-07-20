@@ -36,17 +36,20 @@ export function KpiCard({ label, value, variation, accent, icon: Icon, invert = 
       : `${variation > 0 ? "+" : ""}${variation.toFixed(1).replace(".", ",")}%`;
 
   return (
-    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-[18px]">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-3 sm:p-[18px]">
+      <div className="mb-2 flex items-center justify-between gap-1 sm:mb-4">
         <div
-          className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px]"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[9px] sm:h-[38px] sm:w-[38px] sm:rounded-[11px]"
           style={{ background: ACCENT_BG[accent] }}
         >
-          <Icon className="h-5 w-5" style={{ color: ACCENT_COLOR[accent] }} />
+          <Icon
+            className="h-[17px] w-[17px] sm:h-5 sm:w-5"
+            style={{ color: ACCENT_COLOR[accent] }}
+          />
         </div>
         <span
           title={variation === null ? "Sem mês anterior para comparar" : undefined}
-          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold sm:px-2.5 sm:py-1 sm:text-[11px] ${
             variation === null
               ? "bg-white/5 text-[color:var(--text-secondary)]"
               : good
@@ -57,10 +60,10 @@ export function KpiCard({ label, value, variation, accent, icon: Icon, invert = 
           {pctText}
         </span>
       </div>
-      <p className="mb-1.5 text-[23px] font-bold leading-none tracking-tight text-white tabular-nums">
+      <p className="mb-1 truncate text-[19px] font-bold leading-none tracking-tight text-white tabular-nums sm:mb-1.5 sm:text-[23px]">
         {formatBRL(value)}
       </p>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--text-secondary)]">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.06em] text-[color:var(--text-secondary)] sm:text-[11px]">
         {label}
       </p>
     </div>

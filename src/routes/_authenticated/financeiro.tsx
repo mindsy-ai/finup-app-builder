@@ -194,11 +194,11 @@ function FinanceiroPage() {
   const netLine = dash.monthly.map((m) => ({ month: m.month, net: m.receita - m.despesa }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-bold leading-tight text-white">Financeiro</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          <h1 className="text-xl font-bold leading-tight text-white sm:text-2xl">Financeiro</h1>
+          <p className="mt-0.5 text-[13px] text-[color:var(--text-secondary)] sm:mt-1 sm:text-sm">
             Lucro, despesas, recorrências e contas a pagar · {formatMonthYearPT(refDate)}
           </p>
         </div>
@@ -212,7 +212,7 @@ function FinanceiroPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <MiniKpi
           label="Lucro Líquido"
           value={formatBRL(dash.lucroLiquido)}
@@ -505,7 +505,7 @@ function FinanceiroPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
-          <div className="flex items-center justify-between border-b border-[color:var(--border-default)] px-5 py-4">
+          <div className="flex flex-col gap-1 border-b border-[color:var(--border-default)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
             <div>
               <p className="text-sm font-bold text-white">Despesas Recorrentes</p>
               <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
@@ -591,7 +591,7 @@ function FinanceiroPage() {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
-          <div className="flex items-center justify-between border-b border-[color:var(--border-default)] px-5 py-4">
+          <div className="flex flex-col gap-1 border-b border-[color:var(--border-default)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
             <div>
               <p className="text-sm font-bold text-white">Contas a Pagar</p>
               <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
@@ -653,7 +653,7 @@ function FinanceiroPage() {
       {/* Toda despesa do mês, paga ou não — sem isso uma despesa liquidada
           ficaria invisível e impossível de corrigir ou remover. */}
       <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-default)] px-5 py-4">
+        <div className="flex flex-col gap-1 border-b border-[color:var(--border-default)] px-4 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
           <div>
             <p className="text-sm font-bold text-white">Todas as Despesas</p>
             <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
@@ -665,7 +665,7 @@ function FinanceiroPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3">
+        <div className="hidden grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] gap-3 border-b border-[color:var(--border-default)] bg-white/[0.03] px-5 py-3 lg:grid">
           {["Descrição", "Categoria", "Data", "Situação", "Valor", "Ações"].map((h, i) => (
             <span
               key={h}
@@ -687,64 +687,94 @@ function FinanceiroPage() {
         {monthExpenses.map((d) => {
           const st = effectiveStatus(d);
           const sv = statusVisual(st, "expense");
-          return (
-            <div
-              key={d.id}
-              className={`grid grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 last:border-b-0 ${
-                st === "overdue" ? "bg-[rgba(239,68,68,0.04)]" : ""
-              }`}
+          const rowBg = st === "overdue" ? "bg-[rgba(239,68,68,0.04)]" : "";
+          const statusButton = (
+            <button
+              type="button"
+              title={st === "settled" ? "Marcar como a pagar" : "Confirmar pagamento"}
+              disabled={settle.isPending}
+              onClick={() => settle.mutate({ id: d.id, settled: st !== "settled" })}
+              className="rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ color: sv.color, background: sv.bg }}
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <p className="truncate text-[13px] font-medium text-white">{d.description}</p>
-                {d.is_recurring && (
-                  <span
-                    title="Gerada por uma recorrência"
-                    className="flex-shrink-0 rounded-full bg-[rgba(124,58,255,0.14)] px-1.5 py-px text-[9px] font-bold text-[color:var(--brand-purple)]"
-                  >
-                    REC
+              {sv.label}
+            </button>
+          );
+          const actionButtons = (
+            <>
+              <button
+                type="button"
+                aria-label={`Editar despesa ${d.description}`}
+                title="Editar"
+                onClick={() => setEditingExpense(d)}
+                className="rounded-md p-2 text-[color:var(--text-secondary)] hover:bg-white/5 hover:text-white lg:p-1.5"
+              >
+                <Pencil className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label={`Excluir despesa ${d.description}`}
+                title="Excluir"
+                onClick={() => setDeletingPayable(d.id)}
+                className="rounded-md p-2 text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.12)] hover:text-[color:var(--expense)] lg:p-1.5"
+              >
+                <Trash2 className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+              </button>
+            </>
+          );
+          const title = (
+            <>
+              <p className="truncate text-[13px] font-medium text-white lg:text-[13px]">
+                {d.description}
+              </p>
+              {d.is_recurring && (
+                <span
+                  title="Gerada por uma recorrência"
+                  className="flex-shrink-0 rounded-full bg-[rgba(124,58,255,0.14)] px-1.5 py-px text-[9px] font-bold text-[color:var(--brand-purple)]"
+                >
+                  REC
+                </span>
+              )}
+            </>
+          );
+
+          return (
+            <div key={d.id}>
+              {/* Mobile: card */}
+              <div
+                className={`border-b border-[color:var(--border-subtle)] px-4 py-3.5 lg:hidden ${rowBg}`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">{title}</div>
+                  <span className="flex-shrink-0 text-[15px] font-bold text-white tabular-nums">
+                    {formatBRL(d.amount)}
                   </span>
-                )}
+                </div>
+                <p className="mt-0.5 truncate text-[12px] text-[color:var(--text-secondary)]">
+                  {d.category} · {formatDateBR(d.occurred_at)}
+                </p>
+                <div className="mt-2.5 flex items-center justify-between gap-2">
+                  {statusButton}
+                  <div className="flex gap-1">{actionButtons}</div>
+                </div>
               </div>
-              <span className="truncate text-xs text-[color:var(--text-secondary)]">
-                {d.category}
-              </span>
-              <span className="text-xs text-[color:var(--text-secondary)]">
-                {formatDateBR(d.occurred_at)}
-              </span>
-              <div>
-                <button
-                  type="button"
-                  title={st === "settled" ? "Marcar como a pagar" : "Confirmar pagamento"}
-                  disabled={settle.isPending}
-                  onClick={() => settle.mutate({ id: d.id, settled: st !== "settled" })}
-                  className="rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ color: sv.color, background: sv.bg }}
-                >
-                  {sv.label}
-                </button>
-              </div>
-              <span className="text-right text-sm font-bold text-white tabular-nums">
-                {formatBRL(d.amount)}
-              </span>
-              <div className="flex justify-end gap-1">
-                <button
-                  type="button"
-                  aria-label={`Editar despesa ${d.description}`}
-                  title="Editar"
-                  onClick={() => setEditingExpense(d)}
-                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-white/5 hover:text-white"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Excluir despesa ${d.description}`}
-                  title="Excluir"
-                  onClick={() => setDeletingPayable(d.id)}
-                  className="rounded-md p-1.5 text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.12)] hover:text-[color:var(--expense)]"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+
+              {/* Desktop: tabela */}
+              <div
+                className={`hidden grid-cols-[2.2fr_1.2fr_1fr_1fr_0.9fr_72px] items-center gap-3 border-b border-[color:var(--border-subtle)] px-5 py-3.5 lg:grid ${rowBg}`}
+              >
+                <div className="flex min-w-0 items-center gap-2">{title}</div>
+                <span className="truncate text-xs text-[color:var(--text-secondary)]">
+                  {d.category}
+                </span>
+                <span className="text-xs text-[color:var(--text-secondary)]">
+                  {formatDateBR(d.occurred_at)}
+                </span>
+                <div>{statusButton}</div>
+                <span className="text-right text-sm font-bold text-white tabular-nums">
+                  {formatBRL(d.amount)}
+                </span>
+                <div className="flex justify-end gap-1">{actionButtons}</div>
               </div>
             </div>
           );
@@ -939,24 +969,26 @@ function MiniKpi({
         ? "bg-[rgba(34,197,94,0.12)] text-[color:var(--income)]"
         : "bg-white/5 text-[color:var(--text-secondary)]";
   return (
-    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-[18px]">
-      <div className="mb-4 flex items-center justify-between gap-2">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-3 sm:p-[18px]">
+      <div className="mb-2 flex items-center justify-between gap-1 sm:mb-4 sm:gap-2">
         <div
-          className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-[11px]"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[9px] sm:h-[38px] sm:w-[38px] sm:rounded-[11px]"
           style={{ background: bg }}
         >
-          <Icon className="h-5 w-5" style={{ color }} />
+          <Icon className="h-[17px] w-[17px] sm:h-5 sm:w-5" style={{ color }} />
         </div>
         {hint && (
           <span
-            className={`rounded-full px-2.5 py-1 text-right text-[11px] font-bold ${hintClass}`}
+            className={`truncate rounded-full px-1.5 py-0.5 text-right text-[9px] font-bold sm:px-2.5 sm:py-1 sm:text-[11px] ${hintClass}`}
           >
             {hint}
           </span>
         )}
       </div>
-      <p className="mb-1.5 text-[21px] font-bold leading-none text-white tabular-nums">{value}</p>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[color:var(--text-secondary)]">
+      <p className="mb-1 truncate text-[18px] font-bold leading-none text-white tabular-nums sm:mb-1.5 sm:text-[21px]">
+        {value}
+      </p>
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.05em] text-[color:var(--text-secondary)] sm:text-[11px]">
         {label}
       </p>
     </div>
@@ -1026,11 +1058,11 @@ function NovaContaModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-6"
+        className="max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-2xl sm:p-6 sm:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-white">Nova Conta</h2>

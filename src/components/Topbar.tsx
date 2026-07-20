@@ -1,10 +1,10 @@
 import {
+  ArrowLeft,
   Bell,
   Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Menu,
   Search,
   X,
 } from "lucide-react";
@@ -22,8 +22,8 @@ import {
 } from "@/lib/format";
 import { usePeriod } from "@/lib/period";
 import { daysUntilDue, dueLabel, effectiveStatus, statusVisual } from "@/lib/status";
-import { useNav } from "@/lib/nav";
 import { supabase } from "@/integrations/supabase/client";
+import { FinUpLogo } from "./FinUpLogo";
 
 /** normaliza para busca: minúsculas e sem acentos */
 const norm = (s: string) =>
@@ -33,8 +33,8 @@ const norm = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "");
 
 export function Topbar() {
-  const { openNav } = useNav();
   const [initials, setInitials] = useState("");
+  const [mobileSearch, setMobileSearch] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -46,17 +46,27 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 flex h-[62px] flex-shrink-0 items-center gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--bg-nav)] px-4 sm:gap-4 sm:px-7 print:hidden">
-      <button
-        type="button"
-        aria-label="Abrir menu"
-        onClick={openNav}
-        className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-default)] bg-[color:var(--bg-card)] text-[color:var(--text-secondary)] lg:hidden"
-      >
-        <Menu className="h-[19px] w-[19px]" />
-      </button>
-      <GlobalSearch />
-      <div className="ml-auto flex flex-shrink-0 items-center gap-2 sm:gap-2.5">
+    <header className="sticky top-0 z-30 flex h-[56px] flex-shrink-0 items-center gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--bg-nav)] px-4 sm:h-[62px] sm:gap-4 sm:px-7 print:hidden">
+      {/* Mobile: logo à esquerda, já que o menu lateral não existe aqui */}
+      <div className="flex items-center lg:hidden">
+        <FinUpLogo />
+      </div>
+
+      {/* Desktop: campo de busca sempre visível */}
+      <div className="hidden lg:flex lg:min-w-0 lg:flex-1">
+        <GlobalSearch />
+      </div>
+
+      <div className="ml-auto flex flex-shrink-0 items-center gap-1.5 sm:gap-2.5">
+        {/* Mobile: busca vira tela cheia — um campo de 90px não serve para nada */}
+        <button
+          type="button"
+          aria-label="Buscar"
+          onClick={() => setMobileSearch(true)}
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border border-[color:var(--border-default)] bg-[color:var(--bg-card)] text-[color:var(--text-secondary)] lg:hidden"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
         <Notifications />
         <MonthSelector />
         {initials && (
@@ -65,14 +75,51 @@ export function Topbar() {
           </div>
         )}
       </div>
+
+      {mobileSearch && <MobileSearchOverlay onClose={() => setMobileSearch(false)} />}
     </header>
   );
 }
 
-function GlobalSearch() {
+/** Busca em tela cheia no mobile, com o teclado abrindo direto no campo. */
+function MobileSearchOverlay({ onClose }: { onClose: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[color:var(--bg-primary)] lg:hidden">
+      <div className="flex h-[56px] items-center gap-2 border-b border-[color:var(--border-default)] px-3">
+        <button
+          type="button"
+          aria-label="Fechar busca"
+          onClick={onClose}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[10px] text-[color:var(--text-secondary)]"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <GlobalSearch inputRef={inputRef} onNavigate={onClose} variant="overlay" />
+      </div>
+    </div>
+  );
+}
+
+function GlobalSearch({
+  inputRef,
+  onNavigate,
+  variant = "inline",
+}: {
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onNavigate?: () => void;
+  variant?: "inline" | "overlay";
+} = {}) {
   const navigate = useNavigate();
   const [term, setTerm] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(variant === "overlay");
   const boxRef = useRef<HTMLDivElement>(null);
 
   const txQuery = useQuery({ queryKey: ["transactions"], queryFn: fetchTransactions });
@@ -107,13 +154,20 @@ function GlobalSearch() {
     setOpen(false);
     setTerm("");
     navigate({ to });
+    onNavigate?.();
   };
 
+  const overlay = variant === "overlay";
+
   return (
-    <div ref={boxRef} className="relative w-full min-w-0 sm:w-[340px] sm:max-w-[38%]">
+    <div
+      ref={boxRef}
+      className={overlay ? "relative min-w-0 flex-1" : "relative w-full min-w-0 lg:w-[340px]"}
+    >
       <div className="flex items-center gap-2 rounded-[10px] border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-3.5 py-2 focus-within:border-[color:var(--brand-purple)]">
         <Search className="h-[18px] w-[18px] flex-shrink-0 text-[color:var(--text-secondary)]" />
         <input
+          ref={inputRef}
           value={term}
           onChange={(e) => {
             setTerm(e.target.value);

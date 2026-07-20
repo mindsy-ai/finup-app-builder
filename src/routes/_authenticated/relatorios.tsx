@@ -164,11 +164,11 @@ function RelatoriosPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-bold leading-tight text-white">Relatórios</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          <h1 className="text-xl font-bold leading-tight text-white sm:text-2xl">Relatórios</h1>
+          <p className="mt-0.5 text-[13px] text-[color:var(--text-secondary)] sm:mt-1 sm:text-sm">
             DRE, projeções e comparativos · {formatMonthYearPT(refDate)}
           </p>
         </div>
