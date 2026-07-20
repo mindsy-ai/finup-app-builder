@@ -70,7 +70,7 @@
   --text-secondary: #A1A1AA;
   --text-muted: #52525B;
 
-  --gradient-brand: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  --gradient-brand: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
 
   /* Shadcn mapped to FinUp dark tokens */
   --background: var(--bg-primary);
@@ -112,12 +112,38 @@
   }
 }
 
+/* ===== Impressão (Exportar PDF) ===== */
+@media print {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-nav: #ffffff;
+    --border-default: #d4d4d8;
+    --border-subtle: #e4e4e7;
+    --text-primary: #111111;
+    --text-secondary: #52525b;
+    --text-muted: #71717a;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .text-white {
+    color: #111111 !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
 @utility gradient-brand {
-  background-image: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  background-image: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
 }
 
 @utility text-gradient-brand {
-  background-image: linear-gradient(135deg, #6B21FF 0%, #FF5C1A 100%);
+  background-image: linear-gradient(135deg, #FF1C74 0%, #FF8C42 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
